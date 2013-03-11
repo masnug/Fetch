@@ -314,7 +314,7 @@ class Server
             $messages = array();
 
             foreach ($results as $messageId)
-                $messages[] = new Message($messageId, $this);
+                $messages[] = new Mail($messageId, $this);
 
             return $messages;
         } else {
@@ -353,7 +353,7 @@ class Server
         $messages = array();
         for ($i = 1; $i <= $numMessages; $i++) {
             $uid        = imap_uid($stream, $i);
-            $messages[] = new Message($uid, $this);
+            $messages[] = new Mail($uid, $this);
         }
 
         return $messages;
