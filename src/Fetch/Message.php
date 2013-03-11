@@ -92,7 +92,7 @@ class Message
     /**
      * This is the date the email was sent.
      *
-     * @var int
+     * @var \DateTime
      */
     protected $date;
     /**
@@ -165,7 +165,7 @@ class Message
         $message_overview = $this->getOverview();
 
         $this->subject = $message_overview->subject;
-        $this->date = strtotime($message_overview->date);
+        $this->date = new \DateTime($message_overview->date);
         $this->size = $message_overview->size;
 
         foreach (self::$flag_types as $flag) {
@@ -523,11 +523,11 @@ class Message
     /**
      * This function returns the date, as a timestamp, of when the email was sent.
      *
-     * @return int
+     * @return \DateTime
      */
     public function getDate()
     {
-        return isset($this->date) ? $this->date : false;
+        return empty($this->date) ? false : $this->date;
     }
 
     /**
