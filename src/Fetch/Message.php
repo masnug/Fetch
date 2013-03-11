@@ -172,7 +172,7 @@ class Message
             $this->status[$flag] = ($message_overview->$flag == 1);
         }
 
-        /* Next load in all of the header information */
+        /** Next load in all of the header information */
 
         $headers = $this->getHeaders();
 
@@ -213,7 +213,7 @@ class Message
      */
     public function getOverview($force_reload = false)
     {
-        if ($force_reload || !isset($this->message_overview)) {
+        if ($force_reload || empty($this->message_overview)) {
             // returns an array, and since we just want one message we can grab the only result
             $results = imap_fetch_overview($this->imap_stream, $this->uid, FT_UID);
             $this->message_overview = array_shift($results);
@@ -233,7 +233,7 @@ class Message
      */
     public function getHeaders($force_reload = false)
     {
-        if ($force_reload || !isset($this->headers)) {
+        if ($force_reload || empty($this->headers)) {
             // raw headers (since imap_headerinfo doesn't use the unique id)
             $raw_headers = imap_fetchheader($this->imap_stream, $this->uid, FT_UID);
 
@@ -400,7 +400,8 @@ class Message
             case 'base64':
             case 3:
                 return base64_decode($data);
-
+            case 'mime-header':
+                return imap_mime_header_decode($data);
             default:
                 return $data;
         }
@@ -550,7 +551,7 @@ class Message
         if (empty($this->subject)) {
             return '';
         } else {
-            $decoded = imap_mime_header_decode($this->subject);
+            $decoded = $this->decode($this->subject, 'mime-header');
             if (empty($decoded[0])) {
                 return '';
             } else {
