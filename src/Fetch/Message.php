@@ -401,7 +401,12 @@ class Message
             case 3:
                 return base64_decode($data);
             case 'mime-header':
-                return imap_mime_header_decode($data);
+                $decoded = imap_mime_header_decode($data);
+                if (empty($decoded[0])) {
+                    return $data;
+                } else {
+                    return iconv($decoded[0]->charset, 'UTF-8', $decoded[0]->text);
+                }
             default:
                 return $data;
         }
@@ -551,12 +556,7 @@ class Message
         if (empty($this->subject)) {
             return '';
         } else {
-            $decoded = $this->decode($this->subject, 'mime-header');
-            if (empty($decoded[0])) {
-                return '';
-            } else {
-                return $decoded[0]->text;
-            }
+            return $this->decode($this->subject, 'mime-header');
         }
     }
 
