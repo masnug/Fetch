@@ -266,7 +266,7 @@ class Server
     }
 
     /**
-     * This function creates or reopens an imapStream when called.
+     * This function creates or reopens an imap_stream when called.
      *
      */
     protected function setImapStream()
@@ -314,7 +314,7 @@ class Server
             $messages = array();
 
             foreach ($results as $messageId)
-                $messages[] = new Mail($messageId, $this);
+                $messages[] = new Message($messageId, $this);
 
             return $messages;
         } else {
@@ -353,7 +353,7 @@ class Server
         $messages = array();
         for ($i = 1; $i <= $numMessages; $i++) {
             $uid        = imap_uid($stream, $i);
-            $messages[] = new Mail($uid, $this);
+            $messages[] = new Message($uid, $this);
         }
 
         return $messages;
