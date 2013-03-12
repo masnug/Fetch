@@ -91,4 +91,17 @@ class Address
         return $this->raw_name;
     }
 
+    /**
+     * Get address as a string.
+     *
+     * @return string
+     */
+    function __toString()
+    {
+        if (empty($this->name)) {
+            return $this->email;
+        } else {
+            return sprintf('%s <%s>', $this->name, $this->email);
+        }
+    }
 }

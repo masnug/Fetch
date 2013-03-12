@@ -306,6 +306,40 @@ class Server
     }
 
     /**
+     * This function gets the current saved imap resource and returns it.
+     *
+     * @return resource
+     */
+    public function getImapStream()
+    {
+        if (!isset($this->imap_stream)) {
+            $this->setImapStream();
+        }
+
+        return $this->imap_stream;
+    }
+
+    /**
+     * This function creates or reopens an imap_stream when called.
+     */
+    protected function setImapStream()
+    {
+        if (isset($this->imap_stream)) {
+            if (!imap_reopen($this->imap_stream, $this->getServerString(), $this->options, 1)) {
+                throw new \RuntimeException(imap_last_error());
+            }
+        } else {
+            $imap_stream = imap_open($this->getServerString(), $this->username, $this->password, $this->options, 1);
+
+            if ($imap_stream === false) {
+                throw new \RuntimeException(imap_last_error());
+            }
+
+            $this->imap_stream = $imap_stream;
+        }
+    }
+
+    /**
      * Checks if the given mailbox exists.
      *
      * @param $mailbox
@@ -339,53 +373,6 @@ class Server
     }
 
     /**
-     * Creates the given mailbox.
-     *
-     * @param $mailbox
-     *
-     * @return bool
-     */
-    public function createMailBox($mailbox)
-    {
-        return imap_createmailbox($this->getImapStream(), $this->getServerSpecification() . $mailbox);
-    }
-
-    /**
-     * This function gets the current saved imap resource and returns it.
-     *
-     * @return resource
-     */
-    public function getImapStream()
-    {
-        if (!isset($this->imap_stream)) {
-            $this->setImapStream();
-        }
-
-        return $this->imap_stream;
-    }
-
-    /**
-     * This function creates or reopens an imap_stream when called.
-     *
-     */
-    protected function setImapStream()
-    {
-        if (isset($this->imap_stream)) {
-            if (!imap_reopen($this->imap_stream, $this->getServerString(), $this->options, 1)) {
-                throw new \RuntimeException(imap_last_error());
-            }
-        } else {
-            $imap_stream = imap_open($this->getServerString(), $this->username, $this->password, $this->options, 1);
-
-            if ($imap_stream === false) {
-                throw new \RuntimeException(imap_last_error());
-            }
-
-            $this->imap_stream = $imap_stream;
-        }
-    }
-
-    /**
      * Returns the server specification, without adding any mailbox.
      *
      * @return string
@@ -409,5 +396,17 @@ class Server
         $mailbox_path .= '}';
 
         return $mailbox_path;
+    }
+
+    /**
+     * Creates the given mailbox.
+     *
+     * @param $mailbox
+     *
+     * @return bool
+     */
+    public function createMailBox($mailbox)
+    {
+        return imap_createmailbox($this->getImapStream(), $this->getServerSpecification() . $mailbox);
     }
 }
