@@ -402,11 +402,15 @@ class Message
                 return base64_decode($data);
             case 'mime-header':
                 $decoded = imap_mime_header_decode($data);
-                if (empty($decoded[0])) {
-                    return $data;
-                } else {
-                    return iconv($decoded[0]->charset, 'UTF-8', $decoded[0]->text);
+                if (!empty($decoded[0])) {
+                    if ($decoded[0]->charset == 'default') {
+                        $data = $decoded[0]->text;
+                    } else {
+                        $data = iconv($decoded[0]->charset, 'UTF-8', $decoded[0]->text);
+                    }
                 }
+
+                return $data;
             default:
                 return $data;
         }
