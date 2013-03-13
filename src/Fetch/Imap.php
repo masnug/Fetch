@@ -220,7 +220,315 @@ class Imap
     {
         $result = imap_createmailbox($stream, $mailbox);
         if (!$result) {
-            throw new \RuntimeException(join("\n", imap_errors()));
+            throw new \RuntimeException(imap_last_error());
+        }
+    }
+
+    /**
+     * Returns header for a message.
+     *
+     * @link http://php.net/manual/en/function.imap-fetchheader.php
+     *
+     * @param resource $stream
+     * @param int $msg_number <p>
+     * The message number
+     * </p>
+     * @param int $options [optional] <p>
+     * The possible <i>options</i> are:
+     * <b>FT_UID</b> - The <i>msgno</i>
+     * argument is a UID
+     *
+     * @return string the header of the specified message as a text string.
+     */
+    public function fetchHeader($stream, $msg_number, $options = 0)
+    {
+        return imap_fetchheader($stream, $msg_number, $options);
+    }
+
+    /**
+     * Read the structure of a particular message.
+     *
+     * @link http://php.net/manual/en/function.imap-fetchstructure.php
+     *
+     * @param resource $stream
+     * @param int $msg_number <p>
+     * The message number
+     * </p>
+     * @param int $options [optional] <p>
+     * This optional parameter only has a single option,
+     * <b>FT_UID</b>, which tells the function to treat the
+     * <i>msg_number</i> argument as a
+     * UID.
+     * </p>
+     *
+     * @return object an object includes the envelope, internal date, size, flags and
+     * body structure along with a similar object for each mime attachment. The
+     * structure of the returned objects is as follows:
+     * </p>
+     * <p>
+     * <table>
+     * Returned Objects for <b>imap_fetchstructure</b>
+     * <tr valign="top">
+     * <td>type</td>
+     * <td>Primary body type</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>encoding</td>
+     * <td>Body transfer encoding</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>ifsubtype</td>
+     * <td><b>TRUE</b> if there is a subtype string</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>subtype</td>
+     * <td>MIME subtype</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>ifdescription</td>
+     * <td><b>TRUE</b> if there is a description string</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>description</td>
+     * <td>Content description string</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>ifid</td>
+     * <td><b>TRUE</b> if there is an identification string</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>id</td>
+     * <td>Identification string</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>lines</td>
+     * <td>Number of lines</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>bytes</td>
+     * <td>Number of bytes</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>ifdisposition</td>
+     * <td><b>TRUE</b> if there is a disposition string</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>disposition</td>
+     * <td>Disposition string</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>ifdparameters</td>
+     * <td><b>TRUE</b> if the dparameters array exists</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>dparameters</td>
+     * <td>An array of objects where each object has an
+     * "attribute" and a "value"
+     * property corresponding to the parameters on the
+     * Content-disposition MIME
+     * header.</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>ifparameters</td>
+     * <td><b>TRUE</b> if the parameters array exists</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>parameters</td>
+     * <td>An array of objects where each object has an
+     * "attribute" and a "value"
+     * property.</td>
+     * </tr>
+     * <tr valign="top">
+     * <td>parts</td>
+     * <td>An array of objects identical in structure to the top-level
+     * object, each of which corresponds to a MIME body
+     * part.</td>
+     * </tr>
+     * </table>
+     * </p>
+     * <p>
+     * <table>
+     * Primary body type (may vary with used library)
+     * <tr valign="top"><td>0</td><td>text</td></tr>
+     * <tr valign="top"><td>1</td><td>multipart</td></tr>
+     * <tr valign="top"><td>2</td><td>message</td></tr>
+     * <tr valign="top"><td>3</td><td>application</td></tr>
+     * <tr valign="top"><td>4</td><td>audio</td></tr>
+     * <tr valign="top"><td>5</td><td>image</td></tr>
+     * <tr valign="top"><td>6</td><td>video</td></tr>
+     * <tr valign="top"><td>7</td><td>other</td></tr>
+     * </table>
+     * </p>
+     * <p>
+     * <table>
+     * Transfer encodings (may vary with used library)
+     * <tr valign="top"><td>0</td><td>7BIT</td></tr>
+     * <tr valign="top"><td>1</td><td>8BIT</td></tr>
+     * <tr valign="top"><td>2</td><td>BINARY</td></tr>
+     * <tr valign="top"><td>3</td><td>BASE64</td></tr>
+     * <tr valign="top"><td>4</td><td>QUOTED-PRINTABLE</td></tr>
+     * <tr valign="top"><td>5</td><td>OTHER</td></tr>
+     * </table>
+     */
+    public function fetchStructure($stream, $msg_number, $options = 0)
+    {
+        return imap_fetchstructure($stream, $msg_number, $options);
+    }
+
+    /**
+     * Fetch a particular section of the body of the message.
+     *
+     * @link http://php.net/manual/en/function.imap-fetchbody.php
+     *
+     * @param resource $stream
+     * @param int $msg_number <p>
+     * The message number
+     * </p>
+     * @param string $section <p>
+     * The part number. It is a string of integers delimited by period which
+     * index into a body part list as per the IMAP4 specification
+     * </p>
+     * @param int $options [optional] <p>
+     * A bitmask with one or more of the following:
+     * <b>FT_UID</b> - The <i>msg_number</i> is a UID
+     *
+     * @return string a particular section of the body of the specified messages as a
+     * text string.
+     */
+    public function fetchBody($stream, $msg_number, $section, $options = 0)
+    {
+        return imap_fetchbody($stream, $msg_number, $section, $options);
+    }
+
+    /**
+     * Read the message body.
+     *
+     * @link http://php.net/manual/en/function.imap-body.php
+     *
+     * @param resource $stream
+     * @param int $msg_number <p>
+     * The message number
+     * </p>
+     * @param int $options [optional] <p>
+     * The optional <i>options</i> are a bit mask
+     * with one or more of the following:
+     * <b>FT_UID</b> - The <i>msg_number</i> is a UID
+     *
+     * @return string the body of the specified message, as a string.
+     */
+    public function body($stream, $msg_number, $options = 0)
+    {
+        return imap_body($stream, $msg_number, $options);
+    }
+
+    /**
+     * Mark a message for deletion from current mailbox.
+     *
+     * @link http://php.net/manual/en/function.imap-delete.php
+     *
+     * @param resource $stream
+     * @param int $msg_number <p>
+     * The message number
+     * </p>
+     * @param int $options [optional] <p>
+     * You can set the <b>FT_UID</b> which tells the function
+     * to treat the <i>msg_number</i> argument as an
+     * UID.
+     * </p>
+     */
+    public function delete($stream, $msg_number, $options = 0)
+    {
+        imap_delete($stream, $msg_number, $options);
+    }
+
+    /**
+     * Sets flags on messages.
+     *
+     * @link http://php.net/manual/en/function.imap-setflag-full.php
+     *
+     * @param resource $stream
+     * @param string $sequence <p>
+     * A sequence of message numbers. You can enumerate desired messages
+     * with the X,Y syntax, or retrieve all messages
+     * within an interval with the X:Y syntax
+     * </p>
+     * @param string $flag <p>
+     * The flags which you can set are \Seen,
+     * \Answered, \Flagged,
+     * \Deleted, and \Draft as
+     * defined by RFC2060.
+     * </p>
+     * @param int $options [optional] <p>
+     * A bit mask that may contain the single option:
+     * <b>ST_UID</b> - The sequence argument contains UIDs
+     * instead of sequence numbers
+     *
+     * @throws \RuntimeException If operation fail
+     */
+    public function setFlag($stream, $sequence, $flag, $options = null)
+    {
+        $result = imap_setflag_full($stream, $sequence, $flag, $options);
+        if (empty($result)) {
+            throw new \RuntimeException(imap_last_error());
+        }
+    }
+
+    /**
+     * Clears flags on messages.
+     *
+     * @link http://php.net/manual/en/function.imap-clearflag-full.php
+     *
+     * @param resource $stream
+     * @param string $sequence <p>
+     * A sequence of message numbers. You can enumerate desired messages
+     * with the X,Y syntax, or retrieve all messages
+     * within an interval with the X:Y syntax
+     * </p>
+     * @param string $flag <p>
+     * The flags which you can unset are "\\Seen", "\\Answered", "\\Flagged",
+     * "\\Deleted", and "\\Draft" (as defined by RFC2060)
+     * </p>
+     * @param int $options [optional] <p>
+     * <i>options</i> are a bit mask and may contain
+     * the single option:
+     * <b>ST_UID</b> - The sequence argument contains UIDs
+     * instead of sequence numbers
+     *
+     * @throws \RuntimeException If operation fail
+     */
+    public function clearFlag($stream, $sequence, $flag, $options = null)
+    {
+        $result = imap_clearflag_full($stream, $sequence, $flag, $options);
+        if (empty($result)) {
+            throw new \RuntimeException(imap_last_error());
+        }
+    }
+
+    /**
+     * Copy specified messages to a mailbox.
+     *
+     * @link http://php.net/manual/en/function.imap-mail-copy.php
+     *
+     * @param resource $stream
+     * @param string $msglist <p>
+     * <i>msglist</i> is a range not just message
+     * numbers (as described in RFC2060).
+     * </p>
+     * @param string $mailbox <p>
+     * The mailbox name, see <b>imap_open</b> for more
+     * information
+     * </p>
+     * @param int $options [optional] <p>
+     * <i>options</i> is a bitmask of one or more of
+     * <b>CP_UID</b> - the sequence numbers contain UIDS
+     *
+     * @throws \RuntimeException If operation fail
+     */
+    public function mailCopy($stream, $msglist, $mailbox, $options = 0)
+    {
+        $result = imap_mail_copy($stream, $msglist, $mailbox, $options);
+        if (empty($result)) {
+            throw new \RuntimeException(imap_last_error());
         }
     }
 
@@ -243,7 +551,7 @@ class Imap
     {
         $result = imap_close($stream, $flag);
         if (!$result) {
-            throw new \RuntimeException(join("\n", imap_errors()));
+            throw new \RuntimeException(imap_last_error());
         }
     }
 

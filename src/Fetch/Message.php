@@ -137,6 +137,10 @@ class Message
      * @var Attachment[]
      */
     protected $attachments = array();
+    /**
+     * @var Imap
+     */
+    protected $imap;
 
     /**
      * This constructor takes in the uid for the message and the Imap class representing the mailbox the message should be opened from.
@@ -150,6 +154,7 @@ class Message
         $this->imap_connection = $mailbox;
         $this->uid = $message_unique_id;
         $this->imap_stream = $this->imap_connection->getImapStream();
+        $this->imap = $this->imap_connection->getImap();
         $this->loadMessage();
     }
 
@@ -215,7 +220,7 @@ class Message
     {
         if ($force_reload || empty($this->message_overview)) {
             // returns an array, and since we just want one message we can grab the only result
-            $results = imap_fetch_overview($this->imap_stream, $this->uid, FT_UID);
+            $results = $this->imap->fetchOverview($this->imap_stream, $this->uid, FT_UID);
             $this->message_overview = array_shift($results);
         }
 
@@ -227,15 +232,14 @@ class Message
      * and running them through the imap_rfc822_parse_headers function. The results are only retrieved from the server
      * once unless passed true as a parameter.
      *
-     * @param bool $force_reload
+     * @param bool $force_reload Load headers anyway
      *
      * @return array
      */
     public function getHeaders($force_reload = false)
     {
         if ($force_reload || empty($this->headers)) {
-            // raw headers (since imap_headerinfo doesn't use the unique id)
-            $raw_headers = imap_fetchheader($this->imap_stream, $this->uid, FT_UID);
+            $raw_headers = $this->imap->fetchHeader($this->imap_stream, $this->uid, FT_UID);
             $decoded_headers = iconv_mime_decode_headers($raw_headers, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
             $this->headers = array_change_key_case($decoded_headers, CASE_LOWER);
         }
@@ -280,7 +284,7 @@ class Message
     public function getStructure($force_reload = false)
     {
         if ($force_reload || !isset($this->structure)) {
-            $this->structure = imap_fetchstructure($this->imap_stream, $this->uid, FT_UID);
+            $this->structure = $this->imap->fetchStructure($this->imap_stream, $this->uid, FT_UID);
         }
 
         return $this->structure;
@@ -305,8 +309,8 @@ class Message
         } elseif ($structure->type == 0 || $structure->type == 1) {
 
             $message_body = isset($part_identifier) ?
-                imap_fetchbody($this->imap_stream, $this->uid, $part_identifier, FT_UID)
-                : imap_body($this->imap_stream, $this->uid, FT_UID);
+                $this->imap->fetchBody($this->imap_stream, $this->uid, $part_identifier, FT_UID)
+                : $this->imap->body($this->imap_stream, $this->uid, FT_UID);
 
             $message_body = self::decode($message_body, $structure->encoding);
 
@@ -371,6 +375,44 @@ class Message
         }
 
         return $parameters;
+    }
+
+    /**
+     * This function takes in the message data and encoding type and returns the decoded data.
+     *
+     * @param string $data
+     * @param int|string $encoding
+     *
+     * @return string
+     */
+    public static function decode($data, $encoding)
+    {
+        if (!is_numeric($encoding)) {
+            $encoding = strtolower($encoding);
+        }
+
+        switch ($encoding) {
+            case 'quoted-printable':
+            case 4:
+                return quoted_printable_decode($data);
+
+            case 'base64':
+            case 3:
+                return base64_decode($data);
+            case 'mime-header':
+                $decoded = imap_mime_header_decode($data);
+                if (!empty($decoded[0])) {
+                    if ($decoded[0]->charset == 'default') {
+                        $data = $decoded[0]->text;
+                    } else {
+                        $data = iconv($decoded[0]->charset, 'UTF-8', $decoded[0]->text);
+                    }
+                }
+
+                return $data;
+            default:
+                return $data;
+        }
     }
 
     /**
@@ -503,52 +545,12 @@ class Message
     }
 
     /**
-     * This function takes in the message data and encoding type and returns the decoded data.
-     *
-     * @param string $data
-     * @param int|string $encoding
-     *
-     * @return string
-     */
-    public static function decode($data, $encoding)
-    {
-        if (!is_numeric($encoding)) {
-            $encoding = strtolower($encoding);
-        }
-
-        switch ($encoding) {
-            case 'quoted-printable':
-            case 4:
-                return quoted_printable_decode($data);
-
-            case 'base64':
-            case 3:
-                return base64_decode($data);
-            case 'mime-header':
-                $decoded = imap_mime_header_decode($data);
-                if (!empty($decoded[0])) {
-                    if ($decoded[0]->charset == 'default') {
-                        $data = $decoded[0]->text;
-                    } else {
-                        $data = iconv($decoded[0]->charset, 'UTF-8', $decoded[0]->text);
-                    }
-                }
-
-                return $data;
-            default:
-                return $data;
-        }
-    }
-
-    /**
      * This function marks a message for deletion. It is important to note that the message will not be deleted form the
      * mailbox until the Imap->expunge it run.
-     *
-     * @return bool
      */
     public function delete()
     {
-        return imap_delete($this->imap_stream, $this->uid, FT_UID);
+        $this->imap->delete($this->imap_stream, $this->uid, FT_UID);
     }
 
     /**
@@ -628,7 +630,6 @@ class Message
      * @param bool $enable
      *
      * @throws \InvalidArgumentException
-     * @return bool
      */
     public function setFlag($flag, $enable = true)
     {
@@ -639,9 +640,9 @@ class Message
         $flag = '\\' . ucfirst($flag);
 
         if ($enable) {
-            return imap_setflag_full($this->imap_stream, $this->uid, $flag, ST_UID);
+            $this->imap->setFlag($this->imap_stream, $this->uid, $flag, ST_UID);
         } else {
-            return imap_clearflag_full($this->imap_stream, $this->uid, $flag, ST_UID);
+            $this->imap->clearFlag($this->imap_stream, $this->uid, $flag, ST_UID);
         }
     }
 
@@ -649,12 +650,10 @@ class Message
      * This function is used to move a mail to the given mailbox.
      *
      * @param $mailbox
-     *
-     * @return bool
      */
     public function moveToMailBox($mailbox)
     {
-        return imap_mail_copy($this->imap_stream, $this->uid, $mailbox, CP_UID | CP_MOVE);
+        $this->imap->mailCopy($this->imap_stream, $this->uid, $mailbox, CP_UID | CP_MOVE);
     }
 
     /**

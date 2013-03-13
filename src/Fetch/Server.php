@@ -167,6 +167,16 @@ class Server
     }
 
     /**
+     * Get current IMAP wrapper.
+     *
+     * @return \Fetch\Imap
+     */
+    public function getImap()
+    {
+        return $this->imap;
+    }
+
+    /**
      * Set imap wrapper.
      * Very useful for testing.
      *
@@ -299,38 +309,6 @@ class Server
     }
 
     /**
-     * This function gets the current saved imap resource and returns it.
-     *
-     * @return resource
-     */
-    public function getImapStream()
-    {
-        if (!isset($this->imap_stream)) {
-            $this->setImapStream();
-        }
-
-        return $this->imap_stream;
-    }
-
-    /**
-     * This function creates or reopens an imap_stream when called.
-     */
-    protected function setImapStream()
-    {
-        if (isset($this->imap_stream)) {
-            $this->imap->reopen($this->imap_stream, $this->getServerString(), $this->options, 1);
-        } else {
-            $this->imap_stream = $this->imap->open(
-                $this->getServerString(),
-                $this->username,
-                $this->password,
-                $this->options,
-                1
-            );
-        }
-    }
-
-    /**
      * Returns the emails in the current mailbox as an array of ImapMessage objects.
      *
      * @param null|int $limit
@@ -370,6 +348,38 @@ class Server
     }
 
     /**
+     * This function gets the current saved imap resource and returns it.
+     *
+     * @return resource
+     */
+    public function getImapStream()
+    {
+        if (!isset($this->imap_stream)) {
+            $this->setImapStream();
+        }
+
+        return $this->imap_stream;
+    }
+
+    /**
+     * This function creates or reopens an imap_stream when called.
+     */
+    protected function setImapStream()
+    {
+        if (isset($this->imap_stream)) {
+            $this->imap->reopen($this->imap_stream, $this->getServerString(), $this->options, 1);
+        } else {
+            $this->imap_stream = $this->imap->open(
+                $this->getServerString(),
+                $this->username,
+                $this->password,
+                $this->options,
+                1
+            );
+        }
+    }
+
+    /**
      * This function removes all of the messages flagged for deletion from the mailbox.
      */
     public function expunge()
@@ -380,7 +390,7 @@ class Server
     /**
      * Checks if the given mailbox exists.
      *
-     * @param $mailbox
+     * @param string $mailbox
      *
      * @return bool
      */
@@ -439,7 +449,7 @@ class Server
     /**
      * Creates the given mailbox.
      *
-     * @param $mailbox
+     * @param string $mailbox
      */
     public function createMailBox($mailbox)
     {
