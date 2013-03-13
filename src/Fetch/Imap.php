@@ -16,11 +16,6 @@ namespace Fetch;
 class Imap
 {
     /**
-     * @var resource
-     */
-    protected $stream;
-
-    /**
      * Open an IMAP stream to a mailbox.
      *
      * @link http://php.net/manual/en/function.imap-open.php
@@ -65,14 +60,17 @@ class Imap
      * to set one or more connection parameters:
      * DISABLE_AUTHENTICATOR - Disable authentication properties
      *
+     * @return resource an IMAP stream
      * @throws \RuntimeException If connections fail
      */
     public function open($mailbox, $username, $password, $options = 0, $n_retries = 0, array $params = null)
     {
-        $this->stream = imap_open($mailbox, $username, $password, $options, $n_retries, $params);
-        if ($this->stream === false) {
+        $stream = imap_open($mailbox, $username, $password, $options, $n_retries, $params);
+        if ($stream === false) {
             throw new \RuntimeException(imap_last_error());
         }
+
+        return $stream;
     }
 
     /**
@@ -80,6 +78,7 @@ class Imap
      *
      * @link http://php.net/manual/en/function.imap-search.php
      *
+     * @param resource $stream
      * @param string $criteria <p>
      * A string, delimited by spaces, in which the following keywords are
      * allowed. Any multi-word arguments (e.g.
@@ -95,9 +94,9 @@ class Imap
      *
      * @return array an array of message numbers or UIDs.
      */
-    public function search($criteria, $options, $charset = null)
+    public function search($stream, $criteria, $options, $charset = null)
     {
-        $result = imap_search($this->stream, $criteria, $options, $charset);
+        $result = imap_search($stream, $criteria, $options, $charset);
         if (empty($result)) {
             $result = array();
         }
@@ -110,15 +109,16 @@ class Imap
      *
      * @link http://php.net/manual/en/function.imap-uid.php
      *
+     * @param resource $stream
      * @param int $msg_number <p>
      * The message number.
      * </p>
      *
      * @return int The UID of the given message.
      */
-    public function uid($msg_number)
+    public function uid($stream, $msg_number)
     {
-        return imap_uid($this->stream, $msg_number);
+        return imap_uid($stream, $msg_number);
     }
 
     /**
@@ -126,21 +126,25 @@ class Imap
      *
      * @link http://php.net/manual/en/function.imap-num-msg.php
      *
+     * @param resource $stream
+     *
      * @return int Return the number of messages in the current mailbox, as an integer.
      */
-    public function numMsg()
+    public function numMsg($stream)
     {
-        return imap_num_msg($this->stream);
+        return imap_num_msg($stream);
     }
 
     /**
      * Delete all messages marked for deletion.
      *
      * @link http://php.net/manual/en/function.imap-expunge.php
+     *
+     * @param resource $stream
      */
-    public function expunge()
+    public function expunge($stream)
     {
-        imap_expunge($this->stream);
+        imap_expunge($stream);
     }
 
     /**
@@ -148,6 +152,7 @@ class Imap
      *
      * @link http://php.net/manual/en/function.imap-getmailboxes.php
      *
+     * @param resource $stream
      * @param string $ref <p>
      * <i>ref</i> should normally be just the server
      * specification as described in <b>imap_open</b>
@@ -192,9 +197,9 @@ class Imap
      * provided, you can assume the IMAP server supports this feature for this mailbox.
      * </p>
      */
-    public function getMailboxes($ref, $pattern)
+    public function getMailboxes($stream, $ref, $pattern)
     {
-        return imap_getmailboxes($this->stream, $ref, $pattern);
+        return imap_getmailboxes($stream, $ref, $pattern);
     }
 
     /**
@@ -202,6 +207,7 @@ class Imap
      *
      * @link http://php.net/manual/en/function.imap-createmailbox.php
      *
+     * @param resource $stream
      * @param string $mailbox <p>
      * The mailbox name, see <b>imap_open</b> for more
      * information. Names containing international characters should be
@@ -210,9 +216,32 @@ class Imap
      *
      * @throws \RuntimeException If operation fail
      */
-    public function createMailbox($mailbox)
+    public function createMailbox($stream, $mailbox)
     {
-        $result = imap_createmailbox($this->stream, $mailbox);
+        $result = imap_createmailbox($stream, $mailbox);
+        if (!$result) {
+            throw new \RuntimeException(join("\n", imap_errors()));
+        }
+    }
+
+    /**
+     * Close an IMAP stream.
+     *
+     * @link http://php.net/manual/en/function.imap-close.php
+     *
+     * @param resource $stream
+     * @param int $flag [optional] <p>
+     * If set to <b>CL_EXPUNGE</b>, the function will silently
+     * expunge the mailbox before closing, removing all messages marked for
+     * deletion. You can achieve the same thing by using
+     * <b>imap_expunge</b>
+     * </p>
+     *
+     * @throws \RuntimeException If operation fail
+     */
+    public function close($stream, $flag = 0)
+    {
+        $result = imap_close($stream, $flag);
         if (!$result) {
             throw new \RuntimeException(join("\n", imap_errors()));
         }
@@ -223,6 +252,7 @@ class Imap
      *
      * @link http://php.net/manual/en/function.imap-reopen.php
      *
+     * @param resource $stream
      * @param string $mailbox <p>
      * The mailbox name, see <b>imap_open</b> for more
      * information
@@ -237,9 +267,9 @@ class Imap
      *
      * @throws \RuntimeException
      */
-    public function reopen($mailbox, $options = 0, $n_retries = 0)
+    public function reopen($stream, $mailbox, $options = 0, $n_retries = 0)
     {
-        $result = imap_reopen($this->stream, $mailbox, $options, $n_retries);
+        $result = imap_reopen($stream, $mailbox, $options, $n_retries);
         if (!$result) {
             throw new \RuntimeException(imap_last_error());
         }
@@ -250,6 +280,7 @@ class Imap
      *
      * @link http://php.net/manual/en/function.imap-fetch-overview.php
      *
+     * @param resource $stream
      * @param string $sequence <p>
      * A message sequence description. You can enumerate desired messages
      * with the X,Y syntax, or retrieve all messages
@@ -281,8 +312,8 @@ class Imap
      * seen - this message is flagged as already read
      * draft - this message is flagged as being a draft
      */
-    public function fetchOverview($sequence, $options = 0)
+    public function fetchOverview($stream, $sequence, $options = 0)
     {
-        return imap_fetch_overview($this->stream, $sequence, $options);
+        return imap_fetch_overview($stream, $sequence, $options);
     }
 }

@@ -99,6 +99,10 @@ class Server
      * @var string
      */
     protected $service = 'imap';
+    /**
+     * @var Imap
+     */
+    protected $imap;
 
     /**
      * This constructor takes the location and service thats trying to be connected to as its arguments.
@@ -124,6 +128,7 @@ class Server
         }
 
         $this->service = $service;
+        $this->imap = new Imap();
     }
 
     /**
@@ -159,6 +164,21 @@ class Server
         } else {
             $this->flags[] = $flag;
         }
+    }
+
+    /**
+     * Set imap wrapper.
+     * Very useful for testing.
+     *
+     * @param \Fetch\Imap $imap
+     */
+    public function setImap(Imap $imap)
+    {
+        if (!empty($this->imap_stream)) {
+            $this->imap->close($this->imap_stream);
+            $this->imap_stream = null;
+        }
+        $this->imap = $imap;
     }
 
     /**
@@ -259,8 +279,10 @@ class Server
      */
     public function search($criteria = 'ALL', $limit = null)
     {
-        if ($results = imap_search($this->getImapStream(), $criteria, SE_UID, 'UTF-8')) {
-            if (isset($limit) && count($results) > $limit) {
+        $results = $this->imap->search($this->getImapStream(), $criteria, SE_UID, 'UTF-8');
+        if (!empty($results)) {
+            $limit = intval($limit);
+            if ($limit > 0 && count($results) > $limit) {
                 $results = array_slice($results, 0, $limit);
             }
 
@@ -270,9 +292,41 @@ class Server
                 $messages[] = new Message($message_id, $this);
             }
 
-            return $messages;
+            $results = $messages;
+        }
+
+        return $results;
+    }
+
+    /**
+     * This function gets the current saved imap resource and returns it.
+     *
+     * @return resource
+     */
+    public function getImapStream()
+    {
+        if (!isset($this->imap_stream)) {
+            $this->setImapStream();
+        }
+
+        return $this->imap_stream;
+    }
+
+    /**
+     * This function creates or reopens an imap_stream when called.
+     */
+    protected function setImapStream()
+    {
+        if (isset($this->imap_stream)) {
+            $this->imap->reopen($this->imap_stream, $this->getServerString(), $this->options, 1);
         } else {
-            return array();
+            $this->imap_stream = $this->imap->open(
+                $this->getServerString(),
+                $this->username,
+                $this->password,
+                $this->options,
+                1
+            );
         }
     }
 
@@ -298,7 +352,7 @@ class Server
         $stream = $this->getImapStream();
         $messages = array();
         for ($i = 1; $i <= $num_messages; $i++) {
-            $uid = imap_uid($stream, $i);
+            $uid = $this->imap->uid($stream, $i);
             $messages[] = new Message($uid, $this);
         }
 
@@ -312,17 +366,15 @@ class Server
      */
     public function numMessages()
     {
-        return imap_num_msg($this->getImapStream());
+        return $this->imap->numMsg($this->getImapStream());
     }
 
     /**
      * This function removes all of the messages flagged for deletion from the mailbox.
-     *
-     * @return bool
      */
     public function expunge()
     {
-        return imap_expunge($this->getImapStream());
+        $this->imap->expunge($this->getImapStream());
     }
 
     /**
@@ -334,7 +386,7 @@ class Server
      */
     public function hasMailBox($mailbox)
     {
-        return (boolean)imap_getmailboxes(
+        return (boolean)$this->imap->getMailboxes(
             $this->getImapStream(),
             $this->getServerString(),
             $this->getServerSpecification() . $mailbox
@@ -356,52 +408,6 @@ class Server
         }
 
         return $mailbox_path;
-    }
-
-    /**
-     * Creates the given mailbox.
-     *
-     * @param $mailbox
-     *
-     * @return bool
-     */
-    public function createMailBox($mailbox)
-    {
-        return imap_createmailbox($this->getImapStream(), $this->getServerSpecification() . $mailbox);
-    }
-
-    /**
-     * This function gets the current saved imap resource and returns it.
-     *
-     * @return resource
-     */
-    public function getImapStream()
-    {
-        if (!isset($this->imap_stream)) {
-            $this->setImapStream();
-        }
-
-        return $this->imap_stream;
-    }
-
-    /**
-     * This function creates or reopens an imap_stream when called.
-     */
-    protected function setImapStream()
-    {
-        if (isset($this->imap_stream)) {
-            if (!imap_reopen($this->imap_stream, $this->getServerString(), $this->options, 1)) {
-                throw new \RuntimeException(imap_last_error());
-            }
-        } else {
-            $imap_stream = imap_open($this->getServerString(), $this->username, $this->password, $this->options, 1);
-
-            if ($imap_stream === false) {
-                throw new \RuntimeException(imap_last_error());
-            }
-
-            $this->imap_stream = $imap_stream;
-        }
     }
 
     /**
@@ -428,5 +434,15 @@ class Server
         $mailbox_path .= '}';
 
         return $mailbox_path;
+    }
+
+    /**
+     * Creates the given mailbox.
+     *
+     * @param $mailbox
+     */
+    public function createMailBox($mailbox)
+    {
+        $this->imap->createMailbox($this->getImapStream(), $this->getServerSpecification() . $mailbox);
     }
 }
