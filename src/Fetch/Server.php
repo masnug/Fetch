@@ -162,6 +162,26 @@ class Server
     }
 
     /**
+     * Returns the current username.
+     *
+     * @return string
+     */
+    public function getUsername()
+    {
+        return $this->username;
+    }
+
+    /**
+     * Returns the set server path.
+     *
+     * @return string
+     */
+    public function getServerPath()
+    {
+        return $this->server_path;
+    }
+
+    /**
      * This function sets the username and password used to connect to the server.
      *
      * @param string $username
@@ -306,6 +326,51 @@ class Server
     }
 
     /**
+     * Checks if the given mailbox exists.
+     *
+     * @param $mailbox
+     *
+     * @return bool
+     */
+    public function hasMailBox($mailbox)
+    {
+        return (boolean)imap_getmailboxes(
+            $this->getImapStream(),
+            $this->getServerString(),
+            $this->getServerSpecification() . $mailbox
+        );
+    }
+
+    /**
+     * This function takes in all of the connection date (server, port, service, flags, mailbox) and creates the string
+     * thats passed to the imap_open function.
+     *
+     * @return string
+     */
+    public function getServerString()
+    {
+        $mailbox_path = $this->getServerSpecification();
+
+        if (isset($this->mailbox)) {
+            $mailbox_path .= $this->mailbox;
+        }
+
+        return $mailbox_path;
+    }
+
+    /**
+     * Creates the given mailbox.
+     *
+     * @param $mailbox
+     *
+     * @return bool
+     */
+    public function createMailBox($mailbox)
+    {
+        return imap_createmailbox($this->getImapStream(), $this->getServerSpecification() . $mailbox);
+    }
+
+    /**
      * This function gets the current saved imap resource and returns it.
      *
      * @return resource
@@ -340,39 +405,6 @@ class Server
     }
 
     /**
-     * Checks if the given mailbox exists.
-     *
-     * @param $mailbox
-     *
-     * @return bool
-     */
-    public function hasMailBox($mailbox)
-    {
-        return (boolean)imap_getmailboxes(
-            $this->getImapStream(),
-            $this->getServerString(),
-            $this->getServerSpecification() . $mailbox
-        );
-    }
-
-    /**
-     * This function takes in all of the connection date (server, port, service, flags, mailbox) and creates the string
-     * thats passed to the imap_open function.
-     *
-     * @return string
-     */
-    public function getServerString()
-    {
-        $mailbox_path = $this->getServerSpecification();
-
-        if (isset($this->mailbox)) {
-            $mailbox_path .= $this->mailbox;
-        }
-
-        return $mailbox_path;
-    }
-
-    /**
      * Returns the server specification, without adding any mailbox.
      *
      * @return string
@@ -396,17 +428,5 @@ class Server
         $mailbox_path .= '}';
 
         return $mailbox_path;
-    }
-
-    /**
-     * Creates the given mailbox.
-     *
-     * @param $mailbox
-     *
-     * @return bool
-     */
-    public function createMailBox($mailbox)
-    {
-        return imap_createmailbox($this->getImapStream(), $this->getServerSpecification() . $mailbox);
     }
 }
