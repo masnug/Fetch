@@ -27,20 +27,20 @@ class Server
      *
      * @var bool
      */
-    public static $ssl_enable = true;
+    public $ssl_enable = true;
     /**
      * These are the flags that depend on ssl support being compiled into imap.
      *
      * @var array
      */
-    public static $ssl_flags = array('ssl', 'validate-cert', 'novalidate-cert', 'tls', 'notls');
+    public $ssl_flags = array('ssl', 'validate-cert', 'novalidate-cert', 'tls', 'notls');
     /**
      * This is used to prevent the class from putting up conflicting tags. Both directions- key to value, value to key-
      * are checked, so if "novalidate-cert" is passed then "validate-cert" is removed, and vice-versa.
      *
      * @var array
      */
-    public static $exclusive_flags = array('validate-cert' => 'novalidate-cert', 'tls' => 'notls');
+    public $exclusive_flags = array('validate-cert' => 'novalidate-cert', 'tls' => 'notls');
     /**
      * This is the domain or server path the class is connecting to.
      *
@@ -136,13 +136,13 @@ class Server
      */
     public function setFlag($flag, $value = null)
     {
-        if (!self::$ssl_enable && in_array($flag, self::$ssl_flags)) {
+        if (!$this->ssl_enable && in_array($flag, $this->ssl_flags)) {
             return;
         }
 
-        if (isset(self::$exclusive_flags[$flag])) {
+        if (isset($this->exclusive_flags[$flag])) {
             $kill = $flag;
-        } elseif ($index = array_search($flag, self::$exclusive_flags)) {
+        } elseif ($index = array_search($flag, $this->exclusive_flags)) {
             $kill = $index;
         }
 

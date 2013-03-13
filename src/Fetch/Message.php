@@ -26,13 +26,13 @@ class Message
      *
      * @var string
      */
-    public static $charset = 'UTF-8//TRANSLIT';
+    protected $charset = 'UTF-8//TRANSLIT';
     /**
      * This is an array of the various imap flags that can be set.
      *
      * @var string
      */
-    protected static $flag_types = array('recent', 'flagged', 'answered', 'deleted', 'seen', 'draft');
+    protected $flag_types = array('recent', 'flagged', 'answered', 'deleted', 'seen', 'draft');
     /**
      * This is the connection/mailbox class that the email came from.
      *
@@ -168,7 +168,7 @@ class Message
         $this->date = new \DateTime($message_overview->date);
         $this->size = $message_overview->size;
 
-        foreach (self::$flag_types as $flag) {
+        foreach ($this->flag_types as $flag) {
             $this->status[$flag] = ($message_overview->$flag == 1);
         }
 
@@ -310,8 +310,8 @@ class Message
 
             $message_body = self::decode($message_body, $structure->encoding);
 
-            if (!empty($parameters['charset']) && $parameters['charset'] !== self::$charset) {
-                $message_body = iconv($parameters['charset'], self::$charset, $message_body);
+            if (!empty($parameters['charset']) && $parameters['charset'] !== $this->charset) {
+                $message_body = iconv($parameters['charset'], $this->charset, $message_body);
             }
 
             if (strtolower($structure->subtype) == 'plain' || $structure->type == 1) {
@@ -371,44 +371,6 @@ class Message
         }
 
         return $parameters;
-    }
-
-    /**
-     * This function takes in the message data and encoding type and returns the decoded data.
-     *
-     * @param string $data
-     * @param int|string $encoding
-     *
-     * @return string
-     */
-    public static function decode($data, $encoding)
-    {
-        if (!is_numeric($encoding)) {
-            $encoding = strtolower($encoding);
-        }
-
-        switch ($encoding) {
-            case 'quoted-printable':
-            case 4:
-                return quoted_printable_decode($data);
-
-            case 'base64':
-            case 3:
-                return base64_decode($data);
-            case 'mime-header':
-                $decoded = imap_mime_header_decode($data);
-                if (!empty($decoded[0])) {
-                    if ($decoded[0]->charset == 'default') {
-                        $data = $decoded[0]->text;
-                    } else {
-                        $data = iconv($decoded[0]->charset, 'UTF-8', $decoded[0]->text);
-                    }
-                }
-
-                return $data;
-            default:
-                return $data;
-        }
     }
 
     /**
@@ -541,6 +503,44 @@ class Message
     }
 
     /**
+     * This function takes in the message data and encoding type and returns the decoded data.
+     *
+     * @param string $data
+     * @param int|string $encoding
+     *
+     * @return string
+     */
+    public static function decode($data, $encoding)
+    {
+        if (!is_numeric($encoding)) {
+            $encoding = strtolower($encoding);
+        }
+
+        switch ($encoding) {
+            case 'quoted-printable':
+            case 4:
+                return quoted_printable_decode($data);
+
+            case 'base64':
+            case 3:
+                return base64_decode($data);
+            case 'mime-header':
+                $decoded = imap_mime_header_decode($data);
+                if (!empty($decoded[0])) {
+                    if ($decoded[0]->charset == 'default') {
+                        $data = $decoded[0]->text;
+                    } else {
+                        $data = iconv($decoded[0]->charset, 'UTF-8', $decoded[0]->text);
+                    }
+                }
+
+                return $data;
+            default:
+                return $data;
+        }
+    }
+
+    /**
      * This function marks a message for deletion. It is important to note that the message will not be deleted form the
      * mailbox until the Imap->expunge it run.
      *
@@ -632,7 +632,7 @@ class Message
      */
     public function setFlag($flag, $enable = true)
     {
-        if (!in_array($flag, self::$flag_types) || $flag == 'recent') {
+        if (!in_array($flag, $this->flag_types) || $flag == 'recent') {
             throw new \InvalidArgumentException('Unable to set invalid flag "' . $flag . '"');
         }
 
