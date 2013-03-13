@@ -167,6 +167,16 @@ class Server
     }
 
     /**
+     * Get flags.
+     *
+     * @return array
+     */
+    public function getFlags()
+    {
+        return $this->flags;
+    }
+
+    /**
      * Get current IMAP wrapper.
      *
      * @return \Fetch\Imap
@@ -348,6 +358,30 @@ class Server
     }
 
     /**
+     * This function removes all of the messages flagged for deletion from the mailbox.
+     */
+    public function expunge()
+    {
+        $this->imap->expunge($this->getImapStream());
+    }
+
+    /**
+     * Checks if the given mailbox exists.
+     *
+     * @param string $mailbox
+     *
+     * @return bool
+     */
+    public function hasMailBox($mailbox)
+    {
+        return (boolean)$this->imap->getMailboxes(
+            $this->getImapStream(),
+            $this->getServerString(),
+            $this->getServerSpecification() . $mailbox
+        );
+    }
+
+    /**
      * This function gets the current saved imap resource and returns it.
      *
      * @return resource
@@ -377,30 +411,6 @@ class Server
                 1
             );
         }
-    }
-
-    /**
-     * This function removes all of the messages flagged for deletion from the mailbox.
-     */
-    public function expunge()
-    {
-        $this->imap->expunge($this->getImapStream());
-    }
-
-    /**
-     * Checks if the given mailbox exists.
-     *
-     * @param string $mailbox
-     *
-     * @return bool
-     */
-    public function hasMailBox($mailbox)
-    {
-        return (boolean)$this->imap->getMailboxes(
-            $this->getImapStream(),
-            $this->getServerString(),
-            $this->getServerSpecification() . $mailbox
-        );
     }
 
     /**
