@@ -114,8 +114,7 @@ class Server
     public function __construct($server_path, $port = 143, $service = 'imap')
     {
         $this->server_path = $server_path;
-
-        $this->port = $port;
+        $this->port = intval($port);
 
         switch ($port) {
             case 143:
@@ -437,18 +436,14 @@ class Server
      */
     protected function getServerSpecification()
     {
-        $mailbox_path = '{' . $this->server_path;
-
-        if (isset($this->port)) {
-            $mailbox_path .= ':' . $this->port;
-        }
+        $mailbox_path = '{' . $this->server_path . ':' . $this->port;
 
         if ($this->service != 'imap') {
             $mailbox_path .= '/' . $this->service;
         }
 
-        foreach ($this->flags as $flag) {
-            $mailbox_path .= '/' . $flag;
+        if (!empty($this->flags)) {
+            $mailbox_path .= '/' . join('/', $this->flags);
         }
 
         $mailbox_path .= '}';

@@ -63,7 +63,7 @@ class Imap
      * @return resource an IMAP stream
      * @throws \RuntimeException If connections fail
      */
-    public function open($mailbox, $username, $password, $options = 0, $n_retries = 0, array $params = null)
+    public function open($mailbox, $username, $password, $options = 0, $n_retries = 0, array $params = array())
     {
         $stream = imap_open($mailbox, $username, $password, $options, $n_retries, $params);
         if ($stream === false) {
