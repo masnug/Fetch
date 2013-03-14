@@ -99,6 +99,10 @@ class Server
      * @var string
      */
     protected $service = 'imap';
+    /**
+     * @var Imap
+     */
+    protected $imap;
 
     /**
      * This constructor takes the location and service thats trying to be connected to as its arguments.
@@ -110,8 +114,7 @@ class Server
     public function __construct($server_path, $port = 143, $service = 'imap')
     {
         $this->server_path = $server_path;
-
-        $this->port = $port;
+        $this->port = intval($port);
 
         switch ($port) {
             case 143:
@@ -124,6 +127,7 @@ class Server
         }
 
         $this->service = $service;
+        $this->imap = new Imap();
     }
 
     /**
@@ -159,6 +163,41 @@ class Server
         } else {
             $this->flags[] = $flag;
         }
+    }
+
+    /**
+     * Get flags.
+     *
+     * @return array
+     */
+    public function getFlags()
+    {
+        return $this->flags;
+    }
+
+    /**
+     * Get current IMAP wrapper.
+     *
+     * @return \Fetch\Imap
+     */
+    public function getImap()
+    {
+        return $this->imap;
+    }
+
+    /**
+     * Set imap wrapper.
+     * Very useful for testing.
+     *
+     * @param \Fetch\Imap $imap
+     */
+    public function setImap(Imap $imap)
+    {
+        if (!empty($this->imap_stream)) {
+            $this->imap->close($this->imap_stream);
+            $this->imap_stream = null;
+        }
+        $this->imap = $imap;
     }
 
     /**
@@ -259,8 +298,10 @@ class Server
      */
     public function search($criteria = 'ALL', $limit = null)
     {
-        if ($results = imap_search($this->getImapStream(), $criteria, SE_UID, 'UTF-8')) {
-            if (isset($limit) && count($results) > $limit) {
+        $results = $this->imap->search($this->getImapStream(), $criteria, SE_UID, 'UTF-8');
+        if (!empty($results)) {
+            $limit = intval($limit);
+            if ($limit > 0 && count($results) > $limit) {
                 $results = array_slice($results, 0, $limit);
             }
 
@@ -270,10 +311,10 @@ class Server
                 $messages[] = new Message($message_id, $this);
             }
 
-            return $messages;
-        } else {
-            return array();
+            $results = $messages;
         }
+
+        return $results;
     }
 
     /**
@@ -298,7 +339,7 @@ class Server
         $stream = $this->getImapStream();
         $messages = array();
         for ($i = 1; $i <= $num_messages; $i++) {
-            $uid = imap_uid($stream, $i);
+            $uid = $this->imap->uid($stream, $i);
             $messages[] = new Message($uid, $this);
         }
 
@@ -312,62 +353,31 @@ class Server
      */
     public function numMessages()
     {
-        return imap_num_msg($this->getImapStream());
+        return $this->imap->numMsg($this->getImapStream());
     }
 
     /**
      * This function removes all of the messages flagged for deletion from the mailbox.
-     *
-     * @return bool
      */
     public function expunge()
     {
-        return imap_expunge($this->getImapStream());
+        $this->imap->expunge($this->getImapStream());
     }
 
     /**
      * Checks if the given mailbox exists.
      *
-     * @param $mailbox
+     * @param string $mailbox
      *
      * @return bool
      */
     public function hasMailBox($mailbox)
     {
-        return (boolean)imap_getmailboxes(
+        return (boolean)$this->imap->getMailboxes(
             $this->getImapStream(),
             $this->getServerString(),
             $this->getServerSpecification() . $mailbox
         );
-    }
-
-    /**
-     * This function takes in all of the connection date (server, port, service, flags, mailbox) and creates the string
-     * thats passed to the imap_open function.
-     *
-     * @return string
-     */
-    public function getServerString()
-    {
-        $mailbox_path = $this->getServerSpecification();
-
-        if (isset($this->mailbox)) {
-            $mailbox_path .= $this->mailbox;
-        }
-
-        return $mailbox_path;
-    }
-
-    /**
-     * Creates the given mailbox.
-     *
-     * @param $mailbox
-     *
-     * @return bool
-     */
-    public function createMailBox($mailbox)
-    {
-        return imap_createmailbox($this->getImapStream(), $this->getServerSpecification() . $mailbox);
     }
 
     /**
@@ -390,18 +400,33 @@ class Server
     protected function setImapStream()
     {
         if (isset($this->imap_stream)) {
-            if (!imap_reopen($this->imap_stream, $this->getServerString(), $this->options, 1)) {
-                throw new \RuntimeException(imap_last_error());
-            }
+            $this->imap->reopen($this->imap_stream, $this->getServerString(), $this->options, 1);
         } else {
-            $imap_stream = imap_open($this->getServerString(), $this->username, $this->password, $this->options, 1);
-
-            if ($imap_stream === false) {
-                throw new \RuntimeException(imap_last_error());
-            }
-
-            $this->imap_stream = $imap_stream;
+            $this->imap_stream = $this->imap->open(
+                $this->getServerString(),
+                $this->username,
+                $this->password,
+                $this->options,
+                1
+            );
         }
+    }
+
+    /**
+     * This function takes in all of the connection date (server, port, service, flags, mailbox) and creates the string
+     * thats passed to the imap_open function.
+     *
+     * @return string
+     */
+    public function getServerString()
+    {
+        $mailbox_path = $this->getServerSpecification();
+
+        if (isset($this->mailbox)) {
+            $mailbox_path .= $this->mailbox;
+        }
+
+        return $mailbox_path;
     }
 
     /**
@@ -411,22 +436,28 @@ class Server
      */
     protected function getServerSpecification()
     {
-        $mailbox_path = '{' . $this->server_path;
-
-        if (isset($this->port)) {
-            $mailbox_path .= ':' . $this->port;
-        }
+        $mailbox_path = '{' . $this->server_path . ':' . $this->port;
 
         if ($this->service != 'imap') {
             $mailbox_path .= '/' . $this->service;
         }
 
-        foreach ($this->flags as $flag) {
-            $mailbox_path .= '/' . $flag;
+        if (!empty($this->flags)) {
+            $mailbox_path .= '/' . join('/', $this->flags);
         }
 
         $mailbox_path .= '}';
 
         return $mailbox_path;
+    }
+
+    /**
+     * Creates the given mailbox.
+     *
+     * @param string $mailbox
+     */
+    public function createMailBox($mailbox)
+    {
+        $this->imap->createMailbox($this->getImapStream(), $this->getServerSpecification() . $mailbox);
     }
 }
