@@ -16,7 +16,7 @@ Installation
 The most easy way to install the library is via composer. To do so, you have to do
 the following:
 
-    php composer.phar require tedivm/fetch
+    php composer.phar require komex/fetch
 
 Composer will then ask you which version you want to install. Until there are stable
 versions, by using "@dev" it'll install the latest version.
@@ -37,5 +37,11 @@ by composer.
     $messages = $server->getMessages();
     /** @var $message \Fetch\Message */
     foreach ($messages as $message) {
-        echo "Subject: {$message->getSubject()}\nBody: {$message->getMessageBody()}\n";
+        printf(
+            "Subject: %s\nFrom: %s\nTo: %s\nBody: %s\n",
+            $message->getSubject(),
+            $message->getFrom(),
+            $message->getAddresses('to', true),
+            $message->getMessageBody()
+        );
     }
