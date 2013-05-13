@@ -26,7 +26,7 @@ class Message
      *
      * @var string
      */
-    protected $charset = 'UTF-8//TRANSLIT';
+    protected $charset = 'UTF-8';
     /**
      * This is an array of the various imap flags that can be set.
      *
