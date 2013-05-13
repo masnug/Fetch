@@ -166,6 +166,14 @@ class Server
     }
 
     /**
+     * Closing connection to server.
+     */
+    function __destruct()
+    {
+        $this->imap->close($this->imap_stream);
+    }
+
+    /**
      * Get flags.
      *
      * @return array
@@ -318,6 +326,38 @@ class Server
     }
 
     /**
+     * This function gets the current saved imap resource and returns it.
+     *
+     * @return resource
+     */
+    public function getImapStream()
+    {
+        if (!isset($this->imap_stream)) {
+            $this->setImapStream();
+        }
+
+        return $this->imap_stream;
+    }
+
+    /**
+     * This function creates or reopens an imap_stream when called.
+     */
+    protected function setImapStream()
+    {
+        if (isset($this->imap_stream)) {
+            $this->imap->reopen($this->imap_stream, $this->getServerString(), $this->options, 1);
+        } else {
+            $this->imap_stream = $this->imap->open(
+                $this->getServerString(),
+                $this->username,
+                $this->password,
+                $this->options,
+                1
+            );
+        }
+    }
+
+    /**
      * Returns the emails in the current mailbox as an array of ImapMessage objects.
      *
      * @param null|int $limit
@@ -378,38 +418,6 @@ class Server
             $this->getServerString(),
             $this->getServerSpecification() . $mailbox
         );
-    }
-
-    /**
-     * This function gets the current saved imap resource and returns it.
-     *
-     * @return resource
-     */
-    public function getImapStream()
-    {
-        if (!isset($this->imap_stream)) {
-            $this->setImapStream();
-        }
-
-        return $this->imap_stream;
-    }
-
-    /**
-     * This function creates or reopens an imap_stream when called.
-     */
-    protected function setImapStream()
-    {
-        if (isset($this->imap_stream)) {
-            $this->imap->reopen($this->imap_stream, $this->getServerString(), $this->options, 1);
-        } else {
-            $this->imap_stream = $this->imap->open(
-                $this->getServerString(),
-                $this->username,
-                $this->password,
-                $this->options,
-                1
-            );
-        }
     }
 
     /**
