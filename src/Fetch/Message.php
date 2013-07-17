@@ -169,7 +169,8 @@ class Message
 
         $message_overview = $this->getOverview();
 
-        $this->subject = $message_overview->subject;
+        $this->subject =  = isset($message_overview->subject)
+            ? $message_overview->subject : null;
         $this->date = new \DateTime($message_overview->date);
         $this->size = $message_overview->size;
 
